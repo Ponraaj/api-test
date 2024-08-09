@@ -1,12 +1,14 @@
 import { writeFile,readFile } from 'fs/promises';
+import supabase from './supabase.js';
 
 const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-409/';
 const userCount = 36174;
 const pageSize = 25;
-const totalPages =  100
+const totalPages = Math.ceil(userCount / pageSize)   
+const maxRetries = 3
 // Math.ceil(userCount / pageSize)
 
-async function fetchData(pageIndex) {
+async function fetchData(pageIndex,attempt=1) {
     try {
         console.log(`Started fetching data for page ${pageIndex}`);
         const response = await fetch(`${url}?pagination=${pageIndex}`);
@@ -18,35 +20,55 @@ async function fetchData(pageIndex) {
         return data;
     } catch (error) {
         console.error(`Error fetching data for page ${pageIndex}:`, error);
-        return null;
+        if (attempt < maxRetries) {
+            console.log(`Retrying page ${pageIndex} (attempt ${attempt + 1})...`);
+            return fetchData(pageIndex, attempt + 1); // Retry fetching
+        } else {
+            console.error(`Failed to fetch page ${pageIndex} after ${maxRetries} attempts.`);
+            return null; // Return null after max retries
+        }
     }
 }
 
-async function startFetching() {
-    const allSubmissions = [];
-    const allRanks = [];
-
-    for (let pageIndex = 1; pageIndex <= totalPages; pageIndex++) {
+async function transferToSupabase() {
+    for (let pageIndex = 28; pageIndex <= totalPages; pageIndex++) {
         const data = await fetchData(pageIndex);
         if (data) {
-            allSubmissions.push(...data.submissions);
-            allRanks.push(...data.total_rank);
-        }
-        if(pageIndex%10==0) await new Promise(resolve => setTimeout(resolve, 10*1000)); // 10 seconds delay between requests
-    }
+                
+            var questionsArray = data.questions;
 
-    try {
-        await writeFile('submissions.json', JSON.stringify(allSubmissions, null, 2));
-        await writeFile('ranks.json', JSON.stringify(allRanks, null, 2));
-        console.log('All data has been written to submissions.json and ranks.json');
-    } catch (error) {
-        console.error('Error writing data to file:', error);
+            const combinedData = data.submissions.map((submission, index) => {
+                return {
+                    username: data.total_rank[index].username,
+                    rank: data.total_rank[index].rank,
+                    score: data.total_rank[index].score,
+                    no_of_questions: questionsArray.length,
+                    question_ids: questionsArray.map(q => q.question_id),
+                };
+            });
+
+            const { data: insertedData, error } = await supabase
+                .from('user_data')
+                .insert(combinedData);
+
+            if (error) {
+                console.error('Error inserting data into Supabase:', error.message);
+            } else {
+                console.log('Inserted records into Supabase');
+            }
+        }
+
+        // Add a delay of 10 seconds after every 10 pages
+        if (pageIndex % 10 === 0 && pageIndex < totalPages) {
+            console.log('Waiting for 10 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
     }
 }
 
-startFetching();
+// transferToSupabase();
 
-// const username = 'Anand--Singh'
+// const username = 'FingNaresh'
 
 
 // //Rank->username 
@@ -55,7 +77,7 @@ startFetching();
         
 //         const ranksData = await readFile('ranks.json', 'utf8');
 
-//         const ranks = JSON.parse(ranksData);
+//         const ranks = await JSON.parse(ranksData);
 
         
         
@@ -70,7 +92,7 @@ startFetching();
         
 //         const submissionData = await readFile('submissions.json', 'utf8');
 
-//         const submissions = JSON.parse(submissionData);
+//         const submissions = await JSON.parse(submissionData);
 
         
         
