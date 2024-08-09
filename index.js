@@ -1,14 +1,13 @@
-import { writeFile,readFile } from 'fs/promises';
 import supabase from './supabase.js';
 
 const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-409/';
 const userCount = 36174;
 const pageSize = 25;
-const totalPages = Math.ceil(userCount / pageSize)   
+const totalPages = Math.ceil(userCount / pageSize)
 const maxRetries = 3
 // Math.ceil(userCount / pageSize)
 
-async function fetchData(pageIndex,attempt=1) {
+async function fetchData(pageIndex, attempt = 1) {
     try {
         console.log(`Started fetching data for page ${pageIndex}`);
         const response = await fetch(`${url}?pagination=${pageIndex}`);
@@ -31,19 +30,17 @@ async function fetchData(pageIndex,attempt=1) {
 }
 
 async function transferToSupabase() {
-    for (let pageIndex = 28; pageIndex <= totalPages; pageIndex++) {
+    let unfetchedPages = [];
+    for (let pageIndex = 1; pageIndex <= totalPages; pageIndex++) {
         const data = await fetchData(pageIndex);
         if (data) {
-                
-            var questionsArray = data.questions;
-
             const combinedData = data.submissions.map((submission, index) => {
                 return {
                     username: data.total_rank[index].username,
                     rank: data.total_rank[index].rank,
                     score: data.total_rank[index].score,
-                    no_of_questions: questionsArray.length,
-                    question_ids: questionsArray.map(q => q.question_id),
+                    no_of_questions: submission.length,
+                    question_ids: submission.map(q => q.question_id),
                 };
             });
 
@@ -53,9 +50,12 @@ async function transferToSupabase() {
 
             if (error) {
                 console.error('Error inserting data into Supabase:', error.message);
+                unfetchedPages.push(pageIndex); // Store unfetched page index
             } else {
                 console.log('Inserted records into Supabase');
             }
+        } else {
+            unfetchedPages.push(pageIndex); // Store unfetched page index
         }
 
         // Add a delay of 10 seconds after every 10 pages
@@ -64,62 +64,142 @@ async function transferToSupabase() {
             await new Promise(resolve => setTimeout(resolve, 10000));
         }
     }
+
+    // Retry unfetched pages
+    if (unfetchedPages.length > 0) {
+        console.log(`Retrying unfetched pages: ${unfetchedPages.join(', ')}`);
+        for (let pageIndex of unfetchedPages) {
+            const data = await fetchData(pageIndex);
+            if (data) {
+                const combinedData = data.submissions.map((submission, index) => {
+                    return {
+                        username: data.total_rank[index].username,
+                        rank: data.total_rank[index].rank,
+                        score: data.total_rank[index].score,
+                        no_of_questions: submission.length,
+                        question_ids: submission.map(q => q.question_id),
+                    };
+                });
+
+                const { data: insertedData, error } = await supabase
+                    .from('user_data')
+                    .insert(combinedData);
+
+                if (error) {
+                    console.error(`Error inserting data for page ${pageIndex} into Supabase:`, error.message);
+                } else {
+                    console.log(`Inserted records for page ${pageIndex} into Supabase`);
+                }
+            } else {
+                console.error(`Failed to fetch and insert data for page ${pageIndex}.`);
+            }
+
+            // Add a delay of 10 seconds after retrying each page
+            console.log('Waiting for 10 seconds before retrying next page...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+    } else {
+        console.log('All pages fetched and processed successfully.');
+    }
 }
 
-// transferToSupabase();
 
-// const username = 'FingNaresh'
+// transferToSupabase().then(() => {
+//     console.log('Data transfer to Supabase completed.');
+// }).catch(error => {
+//     console.error('Error transferring data to Supabase:', error.message);
+// });
 
 
-// //Rank->username 
-// const readRankFile=async()=>{
-//     try {
-        
-//         const ranksData = await readFile('ranks.json', 'utf8');
 
-//         const ranks = await JSON.parse(ranksData);
+const convertTime=(epochTimestamp)=>{
 
-        
-        
-//         return ranks
-//     } catch (error) {
-//         console.error('Error reading file:', error);
-//     }
-// }
+    const startTime = 8 //8 Am if weekly 8Pm i.e 20 if biWeekly
 
-// const readSubmissionFile=async()=>{
-//     try {
-        
-//         const submissionData = await readFile('submissions.json', 'utf8');
+    const hours = new Date(epochTimestamp * 1000).getHours();
+    const minutes = new Date(epochTimestamp * 1000).getMinutes();
+    const seconds = new Date(epochTimestamp * 1000).getSeconds();  
 
-//         const submissions = await JSON.parse(submissionData);
+    const Readablehours = hours.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const Readableminutes = minutes.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const Readableseconds = seconds.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }); 
+    return `${parseInt(Readablehours)-startTime}:${Readableminutes}:${Readableseconds}`
+}
 
-        
-        
-//         return submissions
-//     } catch (error) {
-//         console.error('Error reading file:', error);
-//     }
 
-// }
-// const ranks = await readRankFile()
-// const submissions = await readSubmissionFile()
+async function insertContestData() {
+    try {
+        const { data: allUsers, error: fetchError } = await supabase
+            .from('students')
+            .select('leetcode_id, student_name');
 
-// const findUserAndSubmission = (username) => {
-//     let userSubmission = null;
+        if (fetchError) {
+            console.error('Error fetching all users:', fetchError.message);
+            return;
+        }
 
-//     for (let i = 0; i < ranks.length; i++) {
-//         if (ranks[i].username === username) {
-//             userSubmission = submissions[i];
-//             console.log('User:', ranks[i]);
-//             console.log('User Submission:', userSubmission);
-//             return { user: ranks[i], userSubmission };
-//         }
-//     }
+        const { data: attendedUsers, error: matchError } = await supabase
+            .from('user_data')
+            .select('username, rank, score, no_of_questions, question_ids')
+            .in('username', allUsers.map(user => user.leetcode_id));
 
-//     console.log('User not found');
-//     return null;
-// };
+        if (matchError) {
+            console.error('Error fetching attended users:', matchError.message);
+            return;
+        }
 
-// const user = findUserAndSubmission(username)
-// console.log(user)
+        // Prepare data for insertion
+        const attendedData = attendedUsers.map(user => {
+            // Find the corresponding student from the students table
+            const student = allUsers.find(u => u.leetcode_id === user.username);
+            return {
+                leetcode_id: user.username,
+                username: student.student_name, // Use student_name or fallback to username if not found
+                rank: user.rank,
+                score: user.score,
+                no_of_questions: user.no_of_questions,
+                question_ids: user.question_ids,
+                status: 'attended'
+            };
+        });
+
+        const attendedIds = attendedUsers.map(user => user.username);
+        const notAttendedData = allUsers
+            .filter(user => !attendedIds.includes(user.leetcode_id))
+            .map(user => ({
+                leetcode_id: user.leetcode_id,
+                username: user.student_name,  // Use student_name from students table
+                rank: null,
+                score: null,
+                no_of_questions: null,
+                question_ids: null,
+                status: 'not attended'
+            }));
+
+        // Combine attended and not attended data
+        const combinedData = [...attendedData, ...notAttendedData];
+
+        // Filter out any entries with null username before insertion
+        const filteredData = combinedData.filter(entry => entry.username !== null);
+
+        // Insert filtered data into the weekly_contest_409 table
+        const { error: insertError } = await supabase
+            .from('weekly_contest_409')
+            .insert(filteredData);
+
+        if (insertError) {
+            console.error('Error inserting data into weekly_contest_409:', insertError.message);
+        } else {
+            console.log('Data successfully inserted into weekly_contest_409.');
+        }
+    } catch (error) {
+        console.error('Error:', error.message);
+    }
+}
+
+// Example usage:
+insertContestData().then(() => {
+    console.log('Contest data processing completed.');
+}).catch(error => {
+    console.error('Error processing contest data:', error.message);
+});
