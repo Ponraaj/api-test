@@ -1,15 +1,12 @@
 import supabase from './supabase.js';
-
 const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-409/';
-const userCount = 36174;
-const pageSize = 25;
+const userCount = 36174; const pageSize = 25;
 const totalPages = Math.ceil(userCount / pageSize)
-const maxRetries = 3
-// Math.ceil(userCount / pageSize)
-
+const maxRetries = 3 
+// Math.ceil(userCount / pageSize) 
 async function fetchData(pageIndex, attempt = 1) {
-    try {
-        console.log(`Started fetching data for page ${pageIndex}`);
+     try { 
+        console.log(`Started fetching data for page ${pageIndex}`); 
         const response = await fetch(`${url}?pagination=${pageIndex}`);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
@@ -31,16 +28,17 @@ async function fetchData(pageIndex, attempt = 1) {
 
 async function transferToSupabase() {
     let unfetchedPages = [];
-    for (let pageIndex = 1; pageIndex <= totalPages; pageIndex++) {
+    for (let pageIndex = 2; pageIndex <= totalPages; pageIndex++) {
+        if(pageIndex==78) continue
         const data = await fetchData(pageIndex);
         if (data) {
             const combinedData = data.submissions.map((submission, index) => {
                 return {
                     username: data.total_rank[index].username,
                     rank: data.total_rank[index].rank,
-                    score: data.total_rank[index].score,
-                    no_of_questions: submission.length,
-                    question_ids: submission.map(q => q.question_id),
+                    finish_time: convertTime(data.total_rank[index].finish_time),
+                    no_of_questions: Object.keys(submission).length,
+                    question_ids: Object.keys(submission).map(key => submission[key].question_id),
                 };
             });
 
@@ -75,9 +73,9 @@ async function transferToSupabase() {
                     return {
                         username: data.total_rank[index].username,
                         rank: data.total_rank[index].rank,
-                        score: data.total_rank[index].score,
-                        no_of_questions: submission.length,
-                        question_ids: submission.map(q => q.question_id),
+                        finish_time: convertTime(data.total_rank[index].finish_time),
+                        no_of_questions: Object.keys(submission).length,
+                        question_ids: Object.keys(submission).map(key => submission[key].question_id),
                     };
                 });
 
@@ -140,7 +138,7 @@ async function insertContestData() {
 
         const { data: attendedUsers, error: matchError } = await supabase
             .from('user_data')
-            .select('username, rank, score, no_of_questions, question_ids')
+            .select('username, rank, no_of_questions, question_ids,finish_time')
             .in('username', allUsers.map(user => user.leetcode_id));
 
         if (matchError) {
@@ -156,7 +154,7 @@ async function insertContestData() {
                 leetcode_id: user.username,
                 username: student.student_name, // Use student_name or fallback to username if not found
                 rank: user.rank,
-                score: user.score,
+                finish_time: user.finish_time,
                 no_of_questions: user.no_of_questions,
                 question_ids: user.question_ids,
                 status: 'attended'
@@ -170,7 +168,7 @@ async function insertContestData() {
                 leetcode_id: user.leetcode_id,
                 username: user.student_name,  // Use student_name from students table
                 rank: null,
-                score: null,
+                finish_time: null,
                 no_of_questions: null,
                 question_ids: null,
                 status: 'not attended'
@@ -198,8 +196,11 @@ async function insertContestData() {
 }
 
 // Example usage:
-insertContestData().then(() => {
-    console.log('Contest data processing completed.');
-}).catch(error => {
-    console.error('Error processing contest data:', error.message);
-});
+insertContestData()
+
+
+// transferToSupabase().then(()=>{
+//     console.log("Transfer to supabase complete")
+// }).catch(err=>{
+//     console.log(err)
+// })
