@@ -1,6 +1,7 @@
 import supabase from './supabase.js';
-const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-409/';
-const userCount = 36174; const pageSize = 25;
+const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-410/';
+const userCount = 36160;
+const pageSize = 25;
 const totalPages = Math.ceil(userCount / pageSize)
 const maxRetries = 3 
 // Math.ceil(userCount / pageSize) 
@@ -28,8 +29,7 @@ async function fetchData(pageIndex, attempt = 1) {
 
 async function transferToSupabase() {
     let unfetchedPages = [];
-    for (let pageIndex = 2; pageIndex <= totalPages; pageIndex++) {
-        if(pageIndex==78) continue
+    for (let pageIndex = 1; pageIndex <= totalPages; pageIndex++) {
         const data = await fetchData(pageIndex);
         if (data) {
             const combinedData = data.submissions.map((submission, index) => {
@@ -182,13 +182,13 @@ async function insertContestData() {
 
         // Insert filtered data into the weekly_contest_409 table
         const { error: insertError } = await supabase
-            .from('weekly_contest_409')
+            .from('weekly_contest_410')
             .insert(filteredData);
 
         if (insertError) {
-            console.error('Error inserting data into weekly_contest_409:', insertError.message);
+            console.error('Error inserting data into weekly_contest_410:', insertError.message);
         } else {
-            console.log('Data successfully inserted into weekly_contest_409.');
+            console.log('Data successfully inserted into weekly_contest_410.');
         }
     } catch (error) {
         console.error('Error:', error.message);
@@ -196,7 +196,7 @@ async function insertContestData() {
 }
 
 // Example usage:
-insertContestData()
+// insertContestData()
 
 
 // transferToSupabase().then(()=>{
