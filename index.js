@@ -129,7 +129,7 @@ async function insertContestData() {
     try {
         const { data: allUsers, error: fetchError } = await supabase
             .from('students')
-            .select('leetcode_id, student_name');
+            .select('leetcode_id, student_name,dept,year,section');
 
         if (fetchError) {
             console.error('Error fetching all users:', fetchError.message);
@@ -148,6 +148,10 @@ async function insertContestData() {
 
         // Prepare data for insertion
         const attendedData = attendedUsers.map(user => {
+            // const submissionDifficulties = submission.question_ids.map((questionId) => {
+            //     const questionIndex = sortedQuestions.findIndex(q => q.question_id === questionId);
+            //     return difficultiesMap[questionIndex];
+            // });
             // Find the corresponding student from the students table
             const student = allUsers.find(u => u.leetcode_id === user.username);
             return {
@@ -157,7 +161,10 @@ async function insertContestData() {
                 finish_time: user.finish_time,
                 no_of_questions: user.no_of_questions,
                 question_ids: user.question_ids,
-                status: 'attended'
+                status: 'attended',
+                dept: student.dept,
+                year: student.year,
+                section: student.section
             };
         });
 
@@ -171,7 +178,10 @@ async function insertContestData() {
                 finish_time: null,
                 no_of_questions: null,
                 question_ids: null,
-                status: 'not attended'
+                status: 'not attended',
+                dept: user.dept,
+                year: user.year,
+                section: user.section
             }));
 
         // Combine attended and not attended data
@@ -195,8 +205,8 @@ async function insertContestData() {
     }
 }
 
-// Example usage:
-// insertContestData()
+// Example usage:   
+insertContestData()
 
 
 // transferToSupabase().then(()=>{
