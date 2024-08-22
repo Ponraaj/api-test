@@ -162,7 +162,7 @@ async function insertContestData() {
                 dept: student.dept,
                 year: student.year,
                 section: student.section,
-                collelge: student.collelge
+                collelge: student.college
             };
         });
 
