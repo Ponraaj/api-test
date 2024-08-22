@@ -1,5 +1,5 @@
 import supabase from './supabase.js';
-const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-410/';
+const url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-411/';
 const userCount = 36160;
 const pageSize = 25;
 const totalPages = Math.ceil(userCount / pageSize)
@@ -208,27 +208,26 @@ async function insertContestData() {
 
 
 const getQuestionDifficulties=async()=>{
-const questions=await fetchData(1).then((res)=>res.questions)
-const questionCredits = await questions.map((q, index) => ({
-    question_id: q.question_id,
-    credit: q.credit // Assuming the index corresponds to the credit; adjust if there's actual credit data
-}));
-questionCredits.sort((a,b)=>a.credit - b.credit)
-
-const difficulties = {};
-    if (questionCredits.length === 4) {
-        difficulties[questionCredits[0].question_id] = 'Easy';
-        difficulties[questionCredits[3].question_id] = 'Hard';
-
-        // For the middle two questions
-        for (let i = 1; i <= 2; i++) {
-            difficulties[questionCredits[i].question_id] = questionCredits[i].credit < 6 ? 'Medium' : 'Hard';
+    const questions=await fetchData(1).then((res)=>res.questions)
+    const questionCredits = await questions.map((q, index) => ({
+        question_id: q.question_id,
+        credit: q.credit // Assuming the index corresponds to the credit; adjust if there's actual credit data
+    }));
+    questionCredits.sort((a,b)=>a.credit - b.credit)
+    
+    const difficulties = {};
+        if (questionCredits.length === 4) {
+            // For the middle two questions
+            for (let i = 0; i <= 3; i++) {
+                if(questionCredits[i].credit<=3) difficulties[questionCredits[i].question_id] = 'Easy'
+                else if(questionCredits[i].credit<=5) difficulties[questionCredits[i].question_id] = 'Medium'
+                else difficulties[questionCredits[i].question_id] = 'Hard'
+            }
         }
+    console.log(difficulties)
+    return difficulties
     }
-
-return difficulties
-}
-
+    
 // transferToSupabase().then(()=>{
 //     console.log("Transfer to supabase complete")
 // }).catch(err=>{
