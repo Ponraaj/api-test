@@ -1,0 +1,11 @@
+(.)Fetch Latest Contest Name
+(.)Change the url based on Latest Contest - 7.50 on Sun and 19.50 on Sat
+(x)Create table for the new Contest.
+(x)Truncate the user_data if Sun else user_data_copy - 10:00 on Sun and 22:00 on Sat
+(x)Obtain the user count
+(x)Fetch the data into the user_data table
+(x)Insert the matched data to the new table created
+(x)Add the contest name to the contests table
+
+
+
