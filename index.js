@@ -10,17 +10,6 @@ let url = '';
 const base_url = `https://leetcode.cn/contest/api/ranking/`;
 let lastSaturdayRun = null;
 
-
-
-
-
-
-
-
-
-
-
-
 //URL Obtaining
 async function fetchAndProcessContest() {
     try {
@@ -101,16 +90,6 @@ async function createNewTable(newTableName) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 //UserCount obtaining
 let userCount = 0;
 async function usercnt(){
@@ -118,15 +97,6 @@ async function usercnt(){
     const cntdata = await response.json();
     userCount = cntdata.user_num;
 }
-
-
-
-
-
-
-
-
-
 
 
 //Data fetching
@@ -153,23 +123,6 @@ async function fetchData(pageIndex, attempt = 1) {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 //Transfering to supabase
@@ -251,19 +204,6 @@ async function transferToSupabase() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 //TimeStamp Converting
 const convertTime = (epochTimestamp) => {
     const date = new Date(epochTimestamp * 1000);
@@ -278,17 +218,6 @@ const convertTime = (epochTimestamp) => {
     return `${parseInt(Readablehours) - startTime}:${Readableminutes}:${Readableseconds}`;
 };
     
-
-
-
-
-
-
-
-
-
-
-
 
 //Inserting data
 async function insertContestData() {
@@ -374,15 +303,6 @@ async function insertContestData() {
 }
 
 
-
-
-
-
-
-
-
-
-
 //Updating Difficulties 
 const getQuestionDifficulties=async()=>{
     const questions=await fetchData(1).then((res)=>res.questions)
@@ -406,16 +326,6 @@ const getQuestionDifficulties=async()=>{
 }
 
 
-
-
-
-    
-
-
-
-
-
-
 //Inserting ContestName
 // Insert the new contest into the database
 async function InsertContestName() {
@@ -430,15 +340,6 @@ async function InsertContestName() {
 
         console.log(`Contest '${modifiedContestName}' inserted successfully.`);
 }
-
-
-
-
-
-
-
-
-
 
 
 //Truncating table
@@ -457,16 +358,6 @@ async function truncateUserDataTable() {
         await client.end();
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 // Calling functions
