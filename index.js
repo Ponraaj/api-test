@@ -405,7 +405,7 @@ async function runOnSunday() {
 }
 
 // Schedule job for Sundays at 10 AM IST
-schedule.scheduleJob('0 10 * * 0', async () => {
+schedule.scheduleJob('15 10 * * 0', async () => {
     try {
         await runOnSunday();
     } catch (err) {
