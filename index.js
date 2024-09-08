@@ -5,8 +5,8 @@ import supabase from './supabase.js';
 import schedule from 'node-schedule';
 const connectionString = process.env.POSTGRES_URL
 const sql=postgres(connectionString)
-let newContestName = 'weekly_contest_412';
-let url = '';
+let newContestName = 'weekly-contest-414';
+let url = 'https://leetcode.cn/contest/api/ranking/weekly-contest-414';
 const base_url = `https://leetcode.cn/contest/api/ranking/`;
 let lastSaturdayRun = null;
 
@@ -46,7 +46,7 @@ async function fetchAndProcessContest() {
         }
 
         newContestName = modifiedContestName;
-        url = `${base_url}${newContestName}`; // Update the URL for fetching contest data
+        url = `${base_url}${newContestName.replace(/_/g, '-')}`; // Update the URL for fetching contest data
         await createNewTable(newContestName); // Ensure the table is created
 
     } catch (error) {
@@ -61,10 +61,10 @@ async function createNewTable(newTableName) {
             id SERIAL PRIMARY KEY,
             username VARCHAR(255) NOT NULL,
             create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            leetcode_id VARCHAR(50) NOT NULL,
-            rank INT NOT NULL,
+            leetcode_id VARCHAR(50),
+            rank INT,
             finish_time VARCHAR(50) DEFAULT '0:0:0',
-            no_of_questions INTEGER NOT NULL,
+            no_of_questions INTEGER DEFAULT NULL,
             question_ids VARCHAR(255) DEFAULT NULL,
             status VARCHAR(50) DEFAULT NULL,
             dept VARCHAR(50) DEFAULT NULL,
@@ -92,16 +92,19 @@ async function createNewTable(newTableName) {
 
 //UserCount obtaining
 let userCount = 0;
+let totalPages = 0;
+const pageSize = 25;
+const maxRetries = 3;
 async function usercnt(){
     const response = await fetch(`${url}?pagination=1`);
     const cntdata = await response.json();
     userCount = cntdata.user_num;
+    totalPages = Math.ceil(userCount / pageSize);
+    console.log(`User Count: ${userCount}\nTotal Pages: ${totalPages}`)
 }
 
 
 //Data fetching
-const pageSize = 25;
-const maxRetries = 3;
 async function fetchData(pageIndex, attempt = 1) {
     try {
         console.log(`Started fetching data for page ${pageIndex}`);
@@ -127,9 +130,9 @@ async function fetchData(pageIndex, attempt = 1) {
 
 //Transfering to supabase
 let userDataTable = "user_data";
-const totalPages = Math.ceil(userCount / pageSize);
 let userData = false;
 async function transferToSupabase() {
+    console.log(`Fetching url: ${url}`)
     let unfetchedPages = [];
     userData = newContestName.includes('biweekly_contest');
     if(userData == true){
@@ -232,7 +235,7 @@ async function insertContestData() {
         }
 
         const { data: attendedUsers, error: matchError } = await supabase
-            .from(userDataTable)
+            .from('user_data')
             .select('username, rank, no_of_questions, question_ids,finish_time')
             .in('username', allUsers.map(user => user.leetcode_id));
 
@@ -252,16 +255,16 @@ async function insertContestData() {
 
             return {
                 leetcode_id: user.username,
-                username: student ? student.student_name : user.username, // Fallback to username if not found
+                username: student.student_name, // Use student_name or fallback to username if not found
                 rank: user.rank,
                 finish_time: user.finish_time,
                 no_of_questions: user.no_of_questions,
-                question_ids: questionDiff,
+                question_ids: questionDiff ,
                 status: 'attended',
-                dept: student ? student.dept : null,
-                year: student ? student.year : null,
-                section: student ? student.section : null,
-                college: student ? student.college : null,
+                dept: student.dept,
+                year: student.year,
+                section: student.section,
+                college: student.college
             };
         });
 
@@ -270,7 +273,7 @@ async function insertContestData() {
             .filter(user => !attendedIds.includes(user.leetcode_id))
             .map(user => ({
                 leetcode_id: user.leetcode_id,
-                username: user.student_name,
+                username: user.student_name,  // Use student_name from students table
                 rank: null,
                 finish_time: null,
                 no_of_questions: null,
@@ -279,7 +282,7 @@ async function insertContestData() {
                 dept: user.dept,
                 year: user.year,
                 section: user.section,
-                college: user.college,
+                college: user.college
             }));
 
         // Combine attended and not attended data
@@ -287,24 +290,24 @@ async function insertContestData() {
 
         // Filter out any entries with null username before insertion
         const filteredData = combinedData.filter(entry => entry.username !== null);
-
-        const { error: insertError } = await supabase
-            .from(newContestName)
+             const { error } = await supabase
+            .from(newContestName.replace(/-/g, '_'))
             .insert(filteredData);
 
-        if (insertError) {
-            console.error('Error inserting data into', newContestName, ':', insertError.message);
+        if (error) {
+            console.error('Error inserting data into', newContestName, ':', error);
         } else {
             console.log('Data successfully inserted into', newContestName);
         }
     } catch (error) {
-        console.error('Error:', error.message);
+        console.error('Error:', error);
     }
 }
 
 
 //Updating Difficulties 
 const getQuestionDifficulties=async()=>{
+    console.log(url)
     const questions=await fetchData(1).then((res)=>res.questions)
     const questionCredits = await questions.map((q, index) => ({
         question_id: q.question_id,
@@ -329,16 +332,16 @@ const getQuestionDifficulties=async()=>{
 //Inserting ContestName
 // Insert the new contest into the database
 async function InsertContestName() {
-    const { error: insertError } = await supabase
+    const { error } = await supabase
             .from('contests')
-            .insert([{ contest_name: modifiedContestName }]);
+            .insert([{ contest_name: newContestName }]);
 
-        if (insertError) {
+        if (error) {
             console.error('Error inserting contest name:', insertError);
             return;
         }
 
-        console.log(`Contest '${modifiedContestName}' inserted successfully.`);
+        console.log(`Contest '${newContestName}' inserted successfully.`);
 }
 
 
@@ -405,7 +408,7 @@ async function runOnSunday() {
 }
 
 // Schedule job for Sundays at 10 AM IST
-schedule.scheduleJob('15 10 * * 0', async () => {
+schedule.scheduleJob('30 10 * * 0', async () => {
     try {
         await runOnSunday();
     } catch (err) {
