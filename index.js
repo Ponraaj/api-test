@@ -334,7 +334,7 @@ const getQuestionDifficulties=async()=>{
 async function InsertContestName() {
     const { error } = await supabase
             .from('contests')
-            .insert([{ contest_name: newContestName }]);
+            .insert([{ contest_name: newContestName.replace(/-/g, '_') }]);
 
         if (error) {
             console.error('Error inserting contest name:', insertError);
