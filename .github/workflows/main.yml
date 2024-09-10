@@ -29,7 +29,11 @@ jobs:
         
       - name: Print environment variables
         run: env
-        
+
+      - name: Test environment
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}"
+          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}"
       - name: Run script
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
