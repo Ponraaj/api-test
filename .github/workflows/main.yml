@@ -12,6 +12,10 @@ jobs:
   run-script:
     runs-on: ubuntu-latest
 
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -26,7 +30,15 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-        
+
+      - name: Supabase init
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Supabase Setup
+        run: supabase functions deploy --project-ref ${{ env.PROJECT_ID }}
+
       - name: Print environment variables
         run: env
 
@@ -34,11 +46,11 @@ jobs:
         run: |
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}"
           echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}"
+
       - name: Run script
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           TZ: "Asia/Kolkata"
-
         run: node index.js
