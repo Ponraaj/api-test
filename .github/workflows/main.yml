@@ -27,7 +27,7 @@ jobs:
 
       - name: Run script with debug info
         run: |
-          node -e "console.log('Supabase URL:', process.env.SUPABASE_URL ? 'Loaded' : 'Not Loaded'); require('./index.js');"
+          node index.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
