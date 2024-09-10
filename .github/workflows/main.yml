@@ -26,7 +26,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-
+        
+      - name: Print environment variables
+        run: env
+        
       - name: Run script
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
