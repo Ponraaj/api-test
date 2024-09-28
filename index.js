@@ -65,7 +65,7 @@ async function createNewTable(newTableName) {
             rank INT,
             finish_time VARCHAR(50) DEFAULT '0:0:0',
             no_of_questions INTEGER DEFAULT NULL,
-            question_ids VARCHAR(255) DEFAULT NULL,
+            question_ids text[] DEFAULT NULL,
             status VARCHAR(50) DEFAULT NULL,
             dept VARCHAR(50) DEFAULT NULL,
             section VARCHAR(50) DEFAULT 'A',
